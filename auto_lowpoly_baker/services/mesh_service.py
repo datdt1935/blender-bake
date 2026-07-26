@@ -21,8 +21,9 @@ def create_lowpoly_copy(
     low = source.copy()
     low.data = source.data.copy()
     low.animation_data_clear()
-    low.name = f"{source.name}_LOW"
-    low.data.name = f"{source.data.name}_LOW"
+    low_name = f"{source.name}_LOW"
+    low.name = low_name
+    low.data.name = low_name
     context.collection.objects.link(low)
 
     removed_before = merge_by_distance(low, merge_distance)

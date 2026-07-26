@@ -10,6 +10,7 @@ from ..operators.bake_operator import (
     OBJECT_OT_alb_create_lowmesh,
     OBJECT_OT_alb_create_lowmesh_and_bake,
     OBJECT_OT_alb_origin_bottom_center_to_world,
+    OBJECT_OT_alb_reset_config,
 )
 
 
@@ -77,6 +78,7 @@ class VIEW3D_PT_alb_auto_baker(Panel):
         util_row = util_box.row()
         util_row.enabled = active is not None and active.type == "MESH"
         util_row.operator(OBJECT_OT_alb_origin_bottom_center_to_world.bl_idname, icon="OBJECT_ORIGIN")
+        util_box.operator(OBJECT_OT_alb_reset_config.bl_idname, icon="LOOP_BACK")
         util_box.operator(OBJECT_OT_alb_clear_unused_generated_data.bl_idname, icon="TRASH")
 
         if settings.last_status:

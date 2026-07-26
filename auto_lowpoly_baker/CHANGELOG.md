@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.5.1
+
+- Added Reset Config utility button to restore configuration defaults.
+
 ## 1.5.0
 
 - Removed the Output panel from the sidebar.

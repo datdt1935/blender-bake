@@ -293,6 +293,39 @@ class OBJECT_OT_alb_clear_unused_generated_data(Operator):
         return {"FINISHED"}
 
 
+class OBJECT_OT_alb_reset_config(Operator):
+    """Reset Auto Baker configuration values to their add-on defaults."""
+
+    bl_idname = "object.alb_reset_config"
+    bl_label = "Reset Config"
+    bl_description = "Reset Auto Baker config values to defaults while keeping selected High/Low objects"
+    bl_options = {"REGISTER", "UNDO"}
+
+    def execute(self, context: Context):
+        settings = context.scene.alb_settings
+        reset_property_names = (
+            "decimate_ratio",
+            "reduction_mode",
+            "target_vertex_count",
+            "merge_distance",
+            "texture_resolution",
+            "uv_island_margin",
+            "bake_margin",
+            "ray_distance",
+            "output_directory",
+            "pack_image",
+            "keep_temporary_data",
+        )
+
+        for name in reset_property_names:
+            if hasattr(settings, name):
+                settings.property_unset(name)
+
+        settings.last_status = "Config reset to defaults"
+        self.report({"INFO"}, "Auto Baker config reset to defaults.")
+        return {"FINISHED"}
+
+
 def _cleanup_created_data(created: dict[str, object]) -> None:
     """Remove temporary datablocks created by a failed create-lowmesh operation."""
     low = created.get("low_object")

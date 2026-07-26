@@ -74,6 +74,7 @@ def main() -> None:
 
         low = bpy.data.objects.get("SmokeHigh_LOW")
         assert_true(low is not None, "Low-poly object was not created")
+        assert_true(low.data.name == low.name, "Low-poly mesh data name should match object name")
         assert_true(settings.low_quality_object == low, "Low Quality field was not assigned")
 
         assert_true(bpy.ops.object.alb_bake_selected_pair.poll(), "Bake operator should poll with object pair")
