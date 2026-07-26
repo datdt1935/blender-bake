@@ -1,0 +1,13 @@
+schema_version = "1.0.0"
+id = "auto_lowpoly_baker"
+version = "1.1.0"
+name = "Auto Lowpoly Baker"
+tagline = "Create a decimated low-poly copy and bake diffuse color"
+maintainer = "OpenAI"
+type = "add-on"
+tags = ["Object", "Bake", "UV", "Material"]
+blender_version_min = "4.2.0"
+license = ["SPDX:MIT"]
+
+[permissions]
+files = "Save baked PNG textures to the selected output directory"
