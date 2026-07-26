@@ -19,12 +19,14 @@ def create_bake_image(source_name: str, resolution: str) -> Image:
         float_buffer=False,
     )
     image.generated_color = (0.0, 0.0, 0.0, 0.0)
+    image["auto_baker_created"] = True
     return image
 
 
 def create_bake_material(obj: Object, image: Image) -> tuple[Material, ShaderNodeTexImage]:
     """Create a material with an active image texture node for Blender's bake operator."""
     material = bpy.data.materials.new(name=f"{obj.name}_Diffuse")
+    material["auto_baker_created"] = True
     material.use_nodes = True
     nodes = material.node_tree.nodes
     links = material.node_tree.links
@@ -51,6 +53,34 @@ def create_bake_material(obj: Object, image: Image) -> tuple[Material, ShaderNod
     nodes.active = texture
     texture.select = True
     return material, texture
+
+
+def find_bake_image(obj: Object) -> Image | None:
+    """Find the active bake image on a low-poly object's material."""
+    image_name = obj.get("auto_baker_texture")
+    if image_name:
+        image = bpy.data.images.get(str(image_name))
+        if image:
+            return image
+
+    for material in obj.data.materials:
+        if not material or not material.use_nodes:
+            continue
+        for node in material.node_tree.nodes:
+            if node.bl_idname == "ShaderNodeTexImage" and getattr(node, "image", None):
+                if node.name == "BAKE_TARGET" or node.label == "Bake Target":
+                    material.node_tree.nodes.active = node
+                    node.select = True
+                    return node.image
+    return None
+
+
+def ensure_active_bake_node(obj: Object) -> Image:
+    """Ensure Blender's bake operator has an active image texture node on the target object."""
+    image = find_bake_image(obj)
+    if not image:
+        raise RuntimeError("Low Quality object has no bake image. Run Create Low Mesh first.")
+    return image
 
 
 def save_image_png(image: Image, source_name: str, output_directory: str) -> Path:

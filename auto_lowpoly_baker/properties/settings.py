@@ -3,13 +3,23 @@
 from __future__ import annotations
 
 import bpy
-from bpy.props import BoolProperty, EnumProperty, FloatProperty, IntProperty, StringProperty
+from bpy.props import BoolProperty, EnumProperty, FloatProperty, IntProperty, PointerProperty, StringProperty
 from bpy.types import PropertyGroup
 
 
 class ALB_Settings(PropertyGroup):
     """User-facing settings stored on the active scene."""
 
+    high_quality_object: PointerProperty(
+        name="High Quality",
+        description="Source high-poly mesh used as the bake source",
+        type=bpy.types.Object,
+    )
+    low_quality_object: PointerProperty(
+        name="Low Quality",
+        description="Generated or selected low-poly mesh used as the bake target",
+        type=bpy.types.Object,
+    )
     decimate_ratio: FloatProperty(
         name="Decimate Ratio",
         description="Fraction of geometry to keep on the generated low-poly copy",
@@ -17,6 +27,30 @@ class ALB_Settings(PropertyGroup):
         min=0.01,
         max=1.0,
         subtype="FACTOR",
+    )
+    reduction_mode: EnumProperty(
+        name="Reduction Mode",
+        description="Choose whether low-poly reduction is driven by ratio or target vertex count",
+        default="RATIO",
+        items=(
+            ("RATIO", "Ratio", "Use Decimate Ratio"),
+            ("TARGET_VERTICES", "Target Vertices", "Compute Decimate Ratio from the requested vertex count"),
+        ),
+    )
+    target_vertex_count: IntProperty(
+        name="Target Vertices",
+        description="Approximate maximum vertex count for the generated low-poly mesh",
+        default=5000,
+        min=3,
+        max=10_000_000,
+    )
+    merge_distance: FloatProperty(
+        name="Merge Distance",
+        description="Merge vertices closer than this distance before and after Decimate",
+        default=0.0001,
+        min=0.0,
+        max=1.0,
+        precision=5,
     )
     texture_resolution: EnumProperty(
         name="Texture Resolution",

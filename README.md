@@ -4,14 +4,14 @@ This repository contains a production-oriented Blender 4.2 LTS+ add-on package f
 
 ## Requirement Analysis
 
-- **Goal**: select one high-poly mesh, create a low-poly duplicate, unwrap it, bake material color to a diffuse PNG, and keep the original object unchanged.
-- **Input**: one active editable mesh object, add-on settings from `Scene.alb_settings`, and an output directory.
-- **Output**: `{ObjectName}_LOW`, a new material, a bake image datablock, and `{ObjectName}_Diffuse.png`.
-- **Workflow**: select mesh, configure **3D View > Sidebar > Auto Baker**, click **Create Lowpoly & Bake**.
+- **Goal**: choose a high-quality mesh, create a prepared low-quality duplicate, then bake material color to a diffuse PNG while keeping the source unchanged.
+- **Input**: explicit High Quality and Low Quality object fields, add-on settings from `Scene.alb_settings`, and an output directory.
+- **Output**: optimized `{ObjectName}_LOW`, a new material, a bake image datablock, and `{ObjectName}_Diffuse.png`.
+- **Workflow**: choose High Quality, pick Ratio or Target Vertices reduction, then either click **Create Low Mesh & Bake**, or use **Create Low Mesh** followed by **Bake**.
 - **Preconditions**: Blender 4.2+, Cycles available, active object is a local mesh with polygons, `.blend` saved when using `//` paths.
 - **Changed Blender data**: new object, mesh, material, image, optional packed image, PNG file.
 - **Preserved data**: source object mesh/materials, active object, selection, mode, frame, render engine, and bake settings.
-- **Failure handling**: validation errors are reported; temporary datablocks are removed unless **Keep Temporary Data** is enabled.
+- **Failure handling**: validation errors are reported; temporary datablocks are removed unless **Keep Temporary Data** is enabled. Unused materials and their texture images can also be cleared from the Utilities section.
 - **Context risk**: UV unwrap, modifier apply, and bake require `bpy.ops`, so those calls run inside a context-preservation layer.
 
 ## Assumptions
@@ -26,9 +26,9 @@ This repository contains a production-oriented Blender 4.2 LTS+ add-on package f
 - `auto_lowpoly_baker/__init__.py`: registration and `bl_info`.
 - `properties/settings.py`: scene settings.
 - `panels/main_panel.py`: sidebar UI.
-- `operators/bake_operator.py`: user-facing operator and cleanup orchestration.
+- `operators/bake_operator.py`: create-lowmesh, bake-pair, one-click, and origin utility operators.
 - `services/context_service.py`: mode, selection, active object, frame, render engine, and bake setting preservation.
-- `services/mesh_service.py`: duplicate, Decimate modifier, Smart UV Project.
+- `services/mesh_service.py`: duplicate, Merge by Distance, Ratio/Target Vertices Decimate, Smart UV Project.
 - `services/material_service.py`: bake image, low-poly material, PNG save, image pack.
 - `services/bake_service.py`: Cycles diffuse bake configuration and bake call.
 - `utils/validation.py`: preflight checks with user-readable errors.
@@ -66,7 +66,7 @@ The ZIP is written to `dist/auto_lowpoly_baker.zip`.
 blender --background --factory-startup --python tests/smoke_test.py
 ```
 
-The smoke test registers/unregisters the add-on, checks operator polling, creates a cube, runs a small bake, and verifies the PNG exists.
+The smoke test registers/unregisters the add-on, checks operator polling, creates a cube, runs the low-mesh step, runs the bake step, and verifies the PNG exists.
 
 ## Important Blender APIs Used
 

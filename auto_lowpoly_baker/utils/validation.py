@@ -12,19 +12,35 @@ class ValidationError(Exception):
     """Raised when a user-facing bake precondition is not satisfied."""
 
 
-def validate_bake_request(context: Context, settings) -> None:
-    """Validate active object, mesh data, render support, and output path."""
-    obj = context.active_object
+def validate_mesh_object(obj: bpy.types.Object | None, label: str) -> bpy.types.Object:
+    """Validate a mesh object pointer selected in the UI."""
     if obj is None:
-        raise ValidationError("Select one high-poly mesh object before baking.")
+        raise ValidationError(f"Choose a {label} mesh object.")
+    if obj.name not in bpy.data.objects:
+        raise ValidationError(f"The selected {label} object no longer exists.")
     if obj.type != "MESH":
-        raise ValidationError("The active object must be a mesh.")
+        raise ValidationError(f"{label} must be a mesh object.")
     if obj.library or obj.data.library:
-        raise ValidationError("Linked library objects cannot be baked. Make a local copy first.")
+        raise ValidationError(f"{label} is linked from a library. Make a local copy first.")
     if obj.hide_get() or obj.hide_viewport:
-        raise ValidationError("The active mesh is hidden. Unhide it before baking.")
+        raise ValidationError(f"{label} is hidden. Unhide it before baking.")
     if not obj.data.polygons:
-        raise ValidationError("The active mesh has no polygons to bake.")
+        raise ValidationError(f"{label} has no polygons.")
+    return obj
+
+
+def validate_create_lowmesh_request(context: Context, settings) -> bpy.types.Object:
+    """Validate input for the low-poly creation step."""
+    source = settings.high_quality_object or context.active_object
+    return validate_mesh_object(source, "High Quality")
+
+
+def validate_existing_bake_request(context: Context, settings) -> tuple[bpy.types.Object, bpy.types.Object]:
+    """Validate input for baking an existing high-to-low object pair."""
+    high = validate_mesh_object(settings.high_quality_object, "High Quality")
+    low = validate_mesh_object(settings.low_quality_object or context.active_object, "Low Quality")
+    if high == low:
+        raise ValidationError("High Quality and Low Quality must be different objects.")
     _ensure_cycles_can_be_selected(context)
 
     output_directory = settings.output_directory.strip()
@@ -37,6 +53,8 @@ def validate_bake_request(context: Context, settings) -> None:
     parent = absolute_dir if absolute_dir.exists() else absolute_dir.parent
     if not parent.exists():
         raise ValidationError(f"Output parent folder does not exist: {parent}")
+
+    return high, low
 
 
 def _ensure_cycles_can_be_selected(context: Context) -> None:

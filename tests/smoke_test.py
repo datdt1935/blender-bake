@@ -48,14 +48,18 @@ def main() -> None:
 
     try:
         reset_scene()
-        assert_true(not bpy.ops.object.alb_auto_bake.poll(), "Operator should not poll without a mesh")
+        assert_true(not bpy.ops.object.alb_create_lowmesh.poll(), "Create operator should not poll without a mesh")
+        assert_true(not bpy.ops.object.alb_bake_selected_pair.poll(), "Bake operator should not poll without object pair")
+        assert_true(not bpy.ops.object.alb_create_lowmesh_and_bake.poll(), "One-click operator should not poll without a mesh")
+        assert_true(not bpy.ops.object.alb_origin_bottom_center_to_world.poll(), "Origin operator should not poll without a mesh")
 
         obj = create_test_mesh()
         bpy.context.view_layer.objects.active = obj
         obj.select_set(True)
-        assert_true(bpy.ops.object.alb_auto_bake.poll(), "Operator should poll with active mesh")
+        assert_true(bpy.ops.object.alb_origin_bottom_center_to_world.poll(), "Origin operator should poll with active mesh")
 
         settings = bpy.context.scene.alb_settings
+        settings.high_quality_object = obj
         settings.decimate_ratio = 1.0
         settings.texture_resolution = "128"
         settings.bake_margin = 2
@@ -64,9 +68,18 @@ def main() -> None:
         settings.pack_image = False
         settings.keep_temporary_data = False
 
-        result = bpy.ops.object.alb_auto_bake()
-        assert_true(result == {"FINISHED"}, f"Operator returned {result}")
-        assert_true(bpy.data.objects.get("SmokeHigh_LOW") is not None, "Low-poly object was not created")
+        assert_true(bpy.ops.object.alb_create_lowmesh.poll(), "Create operator should poll with High Quality mesh")
+        create_result = bpy.ops.object.alb_create_lowmesh()
+        assert_true(create_result == {"FINISHED"}, f"Create operator returned {create_result}")
+
+        low = bpy.data.objects.get("SmokeHigh_LOW")
+        assert_true(low is not None, "Low-poly object was not created")
+        assert_true(settings.low_quality_object == low, "Low Quality field was not assigned")
+
+        assert_true(bpy.ops.object.alb_bake_selected_pair.poll(), "Bake operator should poll with object pair")
+        bake_result = bpy.ops.object.alb_bake_selected_pair()
+        assert_true(bake_result == {"FINISHED"}, f"Bake operator returned {bake_result}")
+
         output = Path(settings.output_directory) / "SmokeHigh_Diffuse.png"
         assert_true(output.exists(), f"Expected baked PNG at {output}")
 
