@@ -326,6 +326,135 @@ class OBJECT_OT_alb_reset_config(Operator):
         return {"FINISHED"}
 
 
+class OBJECT_OT_alb_reset_pose(Operator):
+    """Reset the selected object's rig to its default pose."""
+
+    bl_idname = "object.alb_reset_pose"
+    bl_label = "Reset Pose"
+    bl_description = "Reset the rig of the selected object to its default pose by clearing pose bone transforms"
+    bl_options = {"REGISTER", "UNDO"}
+
+    @classmethod
+    def poll(cls, context: Context) -> bool:
+        return find_reset_pose_armature(context) is not None
+
+    def execute(self, context: Context):
+        settings = context.scene.alb_settings
+
+        try:
+            armature = find_reset_pose_armature(context)
+            if armature is None:
+                raise ValidationError("Select a rig (armature) or an object bound to one.")
+            if armature.hide_viewport or armature.hide_get():
+                raise ValidationError(f"Armature '{armature.name}' is hidden. Unhide it before resetting the pose.")
+
+            # Remember the user's selection and mode so we can restore them afterwards.
+            prev_active = context.view_layer.objects.active
+            prev_mode = prev_active.mode if prev_active else "OBJECT"
+            prev_selected = list(context.selected_objects)
+
+            if context.object and context.object.mode != "OBJECT":
+                bpy.ops.object.mode_set(mode="OBJECT")
+
+            # Optionally uncheck active animation tracks so the pose returns to rest, not the animated pose.
+            muted_tracks = 0
+            if settings.reset_pose_disable_anim:
+                muted_tracks = _disable_active_animations(armature)
+
+            # Make the armature the sole active object, enter Pose Mode, and clear transforms.
+            select_only(context, [armature], armature)
+            bpy.ops.object.mode_set(mode="POSE")
+            try:
+                bpy.ops.pose.select_all(action="SELECT")
+                bpy.ops.pose.user_transforms_clear()
+            finally:
+                bpy.ops.object.mode_set(mode="OBJECT")
+
+            # Restore the user's prior selection and mode.
+            select_only(context, prev_selected, prev_active)
+            if prev_active and prev_active.name in bpy.data.objects and prev_mode != "OBJECT":
+                try:
+                    bpy.ops.object.mode_set(mode=prev_mode)
+                except RuntimeError:
+                    pass
+
+            if muted_tracks:
+                settings.last_status = f"Reset pose: {armature.name} (unchecked {muted_tracks} anim)"
+                self.report({"INFO"}, f"Reset pose for {armature.name}; unchecked {muted_tracks} active animation(s).")
+            else:
+                settings.last_status = f"Reset pose: {armature.name}"
+                self.report({"INFO"}, f"Reset pose for {armature.name}.")
+            return {"FINISHED"}
+
+        except ValidationError as exc:
+            settings.last_status = f"Reset pose failed: {exc}"
+            self.report({"ERROR"}, str(exc))
+            return {"CANCELLED"}
+
+        except Exception as exc:
+            LOGGER.error("Reset pose failed: %s\n%s", exc, traceback.format_exc())
+            settings.last_status = f"Reset pose failed: {exc}"
+            self.report({"ERROR"}, f"Reset pose failed: {exc}")
+            return {"CANCELLED"}
+
+
+def find_reset_pose_armature(context: Context) -> bpy.types.Object | None:
+    """Resolve the armature to reset from the active or selected objects."""
+    candidates: list[bpy.types.Object] = []
+    active = context.active_object
+    if active is not None:
+        candidates.append(active)
+    candidates.extend(context.selected_objects)
+
+    seen: set[str] = set()
+    for obj in candidates:
+        if obj is None or obj.name in seen:
+            continue
+        seen.add(obj.name)
+        armature = _armature_from_object(obj)
+        if armature is not None:
+            return armature
+    return None
+
+
+def _disable_active_animations(armature: bpy.types.Object) -> int:
+    """Uncheck (mute) the rig's active NLA animation tracks and clear its active action.
+
+    Returns the number of animation sources that were disabled so a pose reset lands on the
+    rest state instead of the currently animated pose.
+    """
+    anim = armature.animation_data
+    if anim is None:
+        return 0
+
+    disabled = 0
+    for track in anim.nla_tracks:
+        if not track.mute:
+            track.mute = True
+            disabled += 1
+
+    if anim.action is not None:
+        anim.action = None
+        disabled += 1
+
+    return disabled
+
+
+def _armature_from_object(obj: bpy.types.Object | None) -> bpy.types.Object | None:
+    """Return the armature tied to an object: itself, an Armature modifier, or its parent."""
+    if obj is None:
+        return None
+    if obj.type == "ARMATURE":
+        return obj
+    for modifier in getattr(obj, "modifiers", ()):
+        if modifier.type == "ARMATURE" and modifier.object and modifier.object.type == "ARMATURE":
+            return modifier.object
+    parent = obj.parent
+    if parent is not None and parent.type == "ARMATURE":
+        return parent
+    return None
+
+
 def _cleanup_created_data(created: dict[str, object]) -> None:
     """Remove temporary datablocks created by a failed create-lowmesh operation."""
     low = created.get("low_object")

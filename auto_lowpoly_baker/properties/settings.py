@@ -104,6 +104,14 @@ class ALB_Settings(PropertyGroup):
         description="Keep generated objects, materials, and images if baking fails",
         default=False,
     )
+    reset_pose_disable_anim: BoolProperty(
+        name="Uncheck Active Animations",
+        description=(
+            "When resetting the pose, uncheck (mute) the rig's active animation tracks so the pose "
+            "returns to its rest state instead of the animated pose"
+        ),
+        default=True,
+    )
     last_status: StringProperty(
         name="Status",
         description="Last Auto Baker status message",

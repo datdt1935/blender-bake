@@ -18,6 +18,8 @@ Auto Lowpoly Baker is a Blender 4.2 LTS+ add-on that splits low-poly baking into
 - Includes a one-click **Create Low Mesh & Bake** command for the full workflow.
 - Includes a utility to set the selected mesh origin to bottom center and move that origin to world center.
 - Includes a cleanup utility for unused materials and texture images referenced by those unused materials.
+- Includes a **Reset Pose** button that resets the rig of the selected object to its default pose.
+- Includes an **Export GLB** button that exports the selected objects to a Draco-compressed `.glb` with WebP textures using a fixed preset.
 
 ## Install
 
@@ -58,6 +60,12 @@ Select a mesh and click **Origin Bottom Center + Center** to move its origin to 
 
 Click **Clear Unused Data** to remove all unused materials and any texture images referenced only by those unused materials.
 
+In the **Rig** section, select an object and click **Reset Pose** to reset its rig to the default pose. The add-on finds the armature from the active or selected object — the armature itself, a mesh bound by an Armature modifier, or a rig parent — enters Pose Mode, clears the pose bone transforms, then restores your previous selection and mode.
+
+Enable **Uncheck Active Animations** (on by default) so Reset Pose first mutes the rig's active NLA animation tracks and clears its active action. Without this, an active animation drives the pose back to the animated frame instead of the rest pose.
+
+In the **Export** section, select the objects to export and click **Export GLB**. Blender's native glTF export window opens with a fixed preset already applied — GLB binary, selected objects only, +Y up, UVs and Normals, materials as WebP (quality 30), shape keys and skinning, and Draco mesh compression (level 6; quantization position 14, normal 10, texcoord 12, color 10, generic 12) — so you can review or adjust any setting and pick the destination before exporting.
+
 ## Troubleshooting
 
 - If the bake misses areas, increase **Ray Distance**.
@@ -84,6 +92,8 @@ tests/
   smoke_test.py
 scripts/
   build_zip.py
+  reinstall.py
+  install_blender.py
 ```
 
 ## Test
@@ -102,7 +112,17 @@ The smoke test registers and unregisters the add-on repeatedly, checks operator 
 python scripts/build_zip.py
 ```
 
-The release archive is written to `dist/auto_lowpoly_baker.zip`.
+The release archive is written to `dist/auto_lowpoly_baker.zip`. Each build auto-increments the build number in `build_info.py`, which is shown in the panel title (for example, `Auto Baker v1`).
+
+## Reinstall into Blender
+
+After building, reinstall the ZIP into your local Blender (removes the old copy, installs and enables the new build):
+
+```bash
+python scripts/reinstall.py
+```
+
+Close the Blender GUI first, then reopen it afterwards to pick up the new build. If `blender.exe` is not found automatically, set `BLENDER_EXE` to its path, for example `set BLENDER_EXE="C:\Program Files\Blender Foundation\Blender 4.2\blender.exe"`.
 
 ## Uninstall
 

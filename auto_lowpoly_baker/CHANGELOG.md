@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.7.0
+
+- Added an **Export GLB** button that opens Blender's native glTF exporter pre-filled with a fixed preset: GLB binary, selected-only, +Y up, UVs and Normals, materials exported as WebP (quality 30), shape keys and skinning, and Draco mesh compression (level 6; quantization position 14, normal 10, texcoord 12, color 10, generic 12). You can review or adjust the settings in the standard export window before exporting.
+
+## 1.6.0
+
+- Added a **Reset Pose** button that resets the rig of the selected object to its default pose. It resolves the armature from the active/selected object (the armature itself, an Armature modifier, or a rig parent), switches to Pose Mode, clears pose bone transforms, and restores the previous selection and mode.
+- Added an **Uncheck Active Animations** option (default on) for Reset Pose. When enabled it mutes the rig's active NLA animation tracks and clears its active action before resetting, so the pose lands on the rest state instead of the animated pose.
+- Added a build number to the **Auto Baker** panel title (for example, `Auto Baker v1`). The number starts at 1 and auto-increments on every `scripts/build_zip.py` run.
+
 ## 1.5.1
 
 - Added Reset Config utility button to restore configuration defaults.
