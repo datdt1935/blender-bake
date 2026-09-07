@@ -118,3 +118,45 @@ class ALB_Settings(PropertyGroup):
         default="",
         options={"SKIP_SAVE"},
     )
+    asset_mesh_name: StringProperty(
+        name="Mesh Name",
+        description="Name of the mesh object to keep after importing a GLB asset; every other imported object is deleted",
+        default="Mesh",
+    )
+    asset_material_name: StringProperty(
+        name="Material Name",
+        description="Existing material applied to the kept mesh after import",
+        default="MaterialAll",
+    )
+    asset_collection_name: StringProperty(
+        name="Collection Name",
+        description="Collection the kept mesh is moved into after import",
+        default="Objects",
+    )
+    asset_show_advanced: BoolProperty(
+        name="Advanced",
+        description="Show advanced options for customizing the GLB import behavior",
+        default=False,
+    )
+    asset_last_status: StringProperty(
+        name="Asset Status",
+        description="Last Assets tab status message",
+        default="",
+        options={"SKIP_SAVE"},
+    )
+    layout_spacing: FloatProperty(
+        name="Compact Spacing",
+        description="Exact edge-to-edge gap between neighboring object bounding boxes used by Compact Grid",
+        default=0.1,
+        min=0.0,
+        subtype="DISTANCE",
+    )
+    layout_sort_by_size: BoolProperty(
+        name="Sort Largest to Smallest",
+        description=(
+            "Order objects by bounding-box size (largest first, left to right) before packing "
+            "them with Compact Grid, for a more visually balanced layout. When off, objects "
+            "are packed in their current selection order"
+        ),
+        default=True,
+    )
