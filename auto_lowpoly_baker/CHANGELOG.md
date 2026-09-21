@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.14.0
+
+- **Position Grid**, **Compact Grid**, and **Center World** now treat a parented hierarchy as one rigid group: only the top-most object of each group is moved, so the child meshes inside an asset (for example `Assets_PlantBanana` and its `Assets_PlantBanana_Alpha_Cards` child) keep their exact relative position instead of being scattered individually.
+- Layout footprints are now measured from the whole group — the root plus every child parented under it — so a multi-mesh asset is packed and spaced by its real size and no longer overlaps its neighbors. Bounds also cover the geometry instanced by a collection-instance empty, and an empty or other non-geometry parent is sized from its children.
+- Hidden objects inside a group no longer inflate its footprint; they still move along with the group.
+- Compact Grid's Z alignment now drops the lowest point of the entire group to Z = 0 rather than only the selected object's own mesh.
+
 ## 1.13.0
 
 - Added a **Sort Largest to Smallest** checkbox (default on) for Compact Grid: when enabled, objects are ordered by bounding-box area before packing, so larger objects land first (top-left, shrinking left to right / row to row) for a more visually balanced layout. When off, objects pack in their current selection order.

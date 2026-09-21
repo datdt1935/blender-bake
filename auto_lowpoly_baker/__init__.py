@@ -26,7 +26,7 @@ from .properties.settings import ALB_Settings
 bl_info = {
     "name": "Auto Lowpoly Baker",
     "author": "OpenAI",
-    "version": (1, 13, 0),
+    "version": (1, 14, 0),
     "blender": (4, 2, 0),
     "location": "View3D > Sidebar > Auto Baker / Assets",
     "description": "Create a decimated low-poly copy and bake material color to a PNG texture",

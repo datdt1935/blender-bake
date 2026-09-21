@@ -1,6 +1,6 @@
 schema_version = "1.0.0"
 id = "auto_lowpoly_baker"
-version = "1.13.0"
+version = "1.14.0"
 name = "Auto Lowpoly Baker"
 tagline = "Create a decimated low-poly copy and bake diffuse color"
 maintainer = "OpenAI"
