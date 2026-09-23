@@ -78,7 +78,7 @@ def _instance_corners(obj: Object, matrix: Matrix) -> list[Vector]:
     return corners
 
 
-def _group_members(obj: Object) -> list[Object]:
+def group_members(obj: Object) -> list[Object]:
     """Return the object plus every descendant that moves rigidly with it."""
     return [obj, *_descendants(obj)]
 
@@ -89,7 +89,7 @@ def _world_bounds(obj: Object) -> tuple[Vector, Vector]:
     Hidden members are ignored so invisible geometry never inflates the footprint; when every
     member is hidden they are used anyway rather than collapsing the group to a point.
     """
-    members = _group_members(obj)
+    members = group_members(obj)
     visible = [member for member in members if _is_visible(member)]
 
     corners: list[Vector] = []
@@ -105,6 +105,18 @@ def _world_bounds(obj: Object) -> tuple[Vector, Vector]:
     min_corner = Vector((min(c.x for c in corners), min(c.y for c in corners), min(c.z for c in corners)))
     max_corner = Vector((max(c.x for c in corners), max(c.y for c in corners), max(c.z for c in corners)))
     return min_corner, max_corner
+
+
+def world_bottom_center(obj: Object) -> Vector:
+    """Return the bottom-center point of the world bounding box of an object and its hierarchy."""
+    min_corner, max_corner = _world_bounds(obj)
+    return Vector(
+        (
+            (min_corner.x + max_corner.x) * 0.5,
+            (min_corner.y + max_corner.y) * 0.5,
+            min_corner.z,
+        )
+    )
 
 
 def _has_ancestor_in(obj: Object, candidates: set[Object]) -> bool:

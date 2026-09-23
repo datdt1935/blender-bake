@@ -15,51 +15,8 @@ from ..operators.bake_operator import (
     OBJECT_OT_alb_reset_pose,
     find_reset_pose_armature,
 )
-
-# glTF export preset applied to Blender's native exporter when the button is clicked.
-# GLB, selected-only, +Y up, UVs + Normals, materials exported as WebP (quality 30),
-# shape keys + skinning, and Draco mesh compression.
-GLB_EXPORT_CONFIG = {
-    "export_format": "GLB",
-    "export_copyright": "",
-    # Include
-    "use_selection": True,
-    "use_visible": False,
-    "use_renderable": False,
-    "use_active_collection": False,
-    "use_active_scene": False,
-    "export_extras": False,
-    "export_cameras": False,
-    "export_lights": False,
-    # Transform
-    "export_yup": True,
-    # Mesh
-    "export_apply": False,
-    "export_texcoords": True,
-    "export_normals": True,
-    "export_tangents": False,
-    "export_attributes": False,
-    "use_mesh_edges": False,
-    "use_mesh_vertices": False,
-    "export_shared_accessors": False,
-    # Material
-    "export_materials": "EXPORT",
-    "export_image_format": "WEBP",
-    "export_image_quality": 30,
-    "export_image_add_webp": False,
-    "export_image_webp_fallback": False,
-    # Data
-    "export_morph": True,
-    "export_skins": True,
-    # Draco compression
-    "export_draco_mesh_compression_enable": True,
-    "export_draco_mesh_compression_level": 6,
-    "export_draco_position_quantization": 14,
-    "export_draco_normal_quantization": 10,
-    "export_draco_texcoord_quantization": 12,
-    "export_draco_color_quantization": 10,
-    "export_draco_generic_quantization": 12,
-}
+from ..operators.export_operator import OBJECT_OT_alb_batch_export_glb
+from ..services.export_service import GLB_EXPORT_CONFIG
 
 
 class VIEW3D_PT_alb_auto_baker(Panel):
@@ -144,6 +101,11 @@ class VIEW3D_PT_alb_auto_baker(Panel):
         export_op = export_row.operator("export_scene.gltf", text="Export GLB", icon="EXPORT")
         for prop_name, prop_value in GLB_EXPORT_CONFIG.items():
             setattr(export_op, prop_name, prop_value)
+
+        export_box.prop(settings, "export_ignore_material")
+        batch_row = export_box.row()
+        batch_row.enabled = len(context.selected_objects) > 0
+        batch_row.operator(OBJECT_OT_alb_batch_export_glb.bl_idname, icon="EXPORT")
 
         if settings.last_status:
             layout.label(text=settings.last_status, icon="INFO")

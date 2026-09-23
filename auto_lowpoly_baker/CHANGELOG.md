@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.16.0
+
+- Added an **Ignore Material** field to the Export box, defaulting to `Assets_Palette`. **Batch Export GLB** empties every material slot holding that material before it writes a file, so the palette material never ends up in the exported GLB, and fills the slots back in afterwards - the object is left exactly as it was.
+- Blender's duplicate suffix is ignored when matching, so `Assets_Palette.001` (what a GLB import usually creates) is stripped as well. Clearing the field exports every material.
+
+## 1.15.0
+
+- Added a **Batch Export GLB** button under the existing **Export GLB** button. It asks for a destination folder, then writes every selected object to its own `<object name>.glb` in that folder, so a whole selection exports in one click instead of one file at a time.
+- Each object is placed on the world origin before it is written — origin moved to the bounding-box bottom center, then that origin moved to (0, 0, 0) — so every exported file holds the asset at 0, 0, 0 rather than at its position in the scene. The scene is restored exactly as it was once the export finishes.
+- A parented hierarchy is exported as a single file named after its top-most object, and its children keep their relative position inside the file.
+- Both export buttons now share one glTF preset (`services/export_service.py`), so a batch export is identical to clicking **Export GLB** once per object.
+
 ## 1.14.0
 
 - **Position Grid**, **Compact Grid**, and **Center World** now treat a parented hierarchy as one rigid group: only the top-most object of each group is moved, so the child meshes inside an asset (for example `Assets_PlantBanana` and its `Assets_PlantBanana_Alpha_Cards` child) keep their exact relative position instead of being scattered individually.

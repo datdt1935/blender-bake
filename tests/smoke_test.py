@@ -37,6 +37,36 @@ def create_test_mesh() -> bpy.types.Object:
     return obj
 
 
+def check_batch_export(obj: bpy.types.Object) -> None:
+    """Batch-export one object and verify the file lands on disk and the scene is left alone."""
+    settings = bpy.context.scene.alb_settings
+    obj.location = (7.0, -3.0, 5.0)
+    # A duplicate-suffixed copy of the ignored material must be stripped from the export too.
+    obj.data.materials.append(bpy.data.materials.new(f"{settings.export_ignore_material}.001"))
+    bpy.context.view_layer.update()
+    before = obj.matrix_world.copy()
+    before_slots = [slot.material.name if slot.material else None for slot in obj.material_slots]
+
+    bpy.ops.object.select_all(action="DESELECT")
+    obj.select_set(True)
+    bpy.context.view_layer.objects.active = obj
+    assert_true(bpy.ops.object.alb_batch_export_glb.poll(), "Batch export should poll with a selection")
+
+    export_dir = tempfile.mkdtemp(prefix="alb_smoke_glb_")
+    result = bpy.ops.object.alb_batch_export_glb(directory=export_dir)
+    assert_true(result == {"FINISHED"}, f"Batch export returned {result}")
+
+    exported = Path(export_dir) / f"{obj.name}.glb"
+    assert_true(exported.exists(), f"Expected batch-exported GLB at {exported}")
+
+    bpy.context.view_layer.update()
+    drift = max(abs(obj.matrix_world[r][c] - before[r][c]) for r in range(4) for c in range(4))
+    assert_true(drift < 1e-5, f"Batch export moved the object permanently (drift {drift})")
+
+    after_slots = [slot.material.name if slot.material else None for slot in obj.material_slots]
+    assert_true(after_slots == before_slots, f"Material slots not restored: {after_slots} != {before_slots}")
+
+
 def main() -> None:
     repo_root = Path(__file__).resolve().parents[1]
     sys.path.insert(0, str(repo_root))
@@ -83,6 +113,8 @@ def main() -> None:
 
         output = Path(settings.output_directory) / "SmokeHigh_Diffuse.png"
         assert_true(output.exists(), f"Expected baked PNG at {output}")
+
+        check_batch_export(obj)
 
     finally:
         addon.unregister()

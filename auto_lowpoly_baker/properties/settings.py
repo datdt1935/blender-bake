@@ -144,6 +144,16 @@ class ALB_Settings(PropertyGroup):
         default="",
         options={"SKIP_SAVE"},
     )
+    export_ignore_material: StringProperty(
+        name="Ignore Material",
+        description=(
+            "Material stripped from the objects before Batch Export GLB writes them, and put "
+            "back afterwards, so it never ends up in the exported file. Blender's duplicate "
+            "suffix is ignored, so Assets_Palette also matches Assets_Palette.001. Leave the "
+            "field empty to export every material"
+        ),
+        default="Assets_Palette",
+    )
     layout_spacing: FloatProperty(
         name="Compact Spacing",
         description="Exact edge-to-edge gap between neighboring object bounding boxes used by Compact Grid",
