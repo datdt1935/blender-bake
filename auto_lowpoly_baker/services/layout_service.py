@@ -119,6 +119,20 @@ def world_bottom_center(obj: Object) -> Vector:
     )
 
 
+def combined_bottom_center(objects: Iterable[Object]) -> Vector:
+    """Return the bottom-center point of the bounding box around several groups together."""
+    bounds = [_world_bounds(obj) for obj in objects]
+    min_corner = Vector((min(b[0].x for b in bounds), min(b[0].y for b in bounds), min(b[0].z for b in bounds)))
+    max_corner = Vector((max(b[1].x for b in bounds), max(b[1].y for b in bounds), max(b[1].z for b in bounds)))
+    return Vector(
+        (
+            (min_corner.x + max_corner.x) * 0.5,
+            (min_corner.y + max_corner.y) * 0.5,
+            min_corner.z,
+        )
+    )
+
+
 def _has_ancestor_in(obj: Object, candidates: set[Object]) -> bool:
     """Return whether any ancestor of ``obj`` is part of ``candidates``."""
     ancestor = obj.parent

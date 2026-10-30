@@ -15,8 +15,7 @@ from ..operators.bake_operator import (
     OBJECT_OT_alb_reset_pose,
     find_reset_pose_armature,
 )
-from ..operators.export_operator import OBJECT_OT_alb_batch_export_glb
-from ..services.export_service import GLB_EXPORT_CONFIG
+from ..operators.export_operator import OBJECT_OT_alb_batch_export_glb, OBJECT_OT_alb_export_glb
 
 
 class VIEW3D_PT_alb_auto_baker(Panel):
@@ -95,14 +94,15 @@ class VIEW3D_PT_alb_auto_baker(Panel):
 
         export_box = layout.box()
         export_box.label(text="Export", icon="EXPORT")
+        export_box.prop(settings, "export_keep_original_pivot")
         export_row = export_box.row()
         export_row.enabled = len(context.selected_objects) > 0
-        # Open Blender's native glTF exporter with the preset config pre-filled.
-        export_op = export_row.operator("export_scene.gltf", text="Export GLB", icon="EXPORT")
-        for prop_name, prop_value in GLB_EXPORT_CONFIG.items():
-            setattr(export_op, prop_name, prop_value)
+        export_row.operator(OBJECT_OT_alb_export_glb.bl_idname, icon="EXPORT")
 
         export_box.prop(settings, "export_ignore_material")
+        split_row = export_box.row()
+        split_row.enabled = settings.export_keep_original_pivot
+        split_row.prop(settings, "export_split_selected_meshes")
         batch_row = export_box.row()
         batch_row.enabled = len(context.selected_objects) > 0
         batch_row.operator(OBJECT_OT_alb_batch_export_glb.bl_idname, icon="EXPORT")

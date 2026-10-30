@@ -14,7 +14,7 @@ from typing import Iterable, Iterator
 import bpy
 from bpy.types import Object
 
-from .layout_service import world_bottom_center
+from .layout_service import combined_bottom_center, group_members, group_roots, world_bottom_center
 
 # glTF export preset applied to Blender's native exporter.
 # GLB, selected-only, +Y up, UVs + Normals, materials exported as WebP (quality 30),
@@ -159,4 +159,96 @@ def centered_at_world_origin(root: Object) -> Iterator[None]:
             mesh.transform(delta.inverted(), shape_keys=True)
             mesh.update()
         root.matrix_world = old_matrix
+        bpy.context.view_layer.update()
+
+
+def split_selected_meshes(selected: Iterable[Object]) -> list[tuple[Object, list[Object]]]:
+    """Turn a selection into export units where every selected mesh is a file of its own.
+
+    Each selected mesh becomes one unit holding only that mesh - its unselected children are
+    left out, so only what is selected is split off. Any other selected object (usually an
+    Empty) is skipped when something under it is selected too, because it only serves as the
+    pivot; selected on its own it stays one unit with its whole hierarchy, as before.
+    Returns ``(root, members)`` pairs in selection order.
+    """
+    chosen: list[Object] = []
+    for obj in selected:
+        if obj is not None and obj not in chosen:
+            chosen.append(obj)
+    chosen_set = set(chosen)
+
+    units: list[tuple[Object, list[Object]]] = [(obj, [obj]) for obj in chosen if obj.type == "MESH"]
+    others = [
+        obj
+        for obj in chosen
+        if obj.type != "MESH" and not any(child in chosen_set for child in obj.children_recursive)
+    ]
+    units.extend((root, group_members(root)) for root in group_roots(others))
+    return units
+
+
+def top_ancestor(obj: Object) -> Object:
+    """Return the top-most parent of ``obj``, or ``obj`` itself when it has no parent."""
+    while obj.parent is not None:
+        obj = obj.parent
+    return obj
+
+
+@contextmanager
+def parents_at_world_origin(roots: Iterable[Object]) -> Iterator[None]:
+    """Export in parent space: move the top-most parent of each root to (0, 0, 0), then back.
+
+    This is the "zero out the parent" trick. glTF writes selected children in world space, so
+    the shared parent (usually an Empty) is translated to the world origin for the block. Every
+    part exported from the same parent then shares that parent's pivot. Only the translation is
+    zeroed; rotation and scale are kept, and no object origin or mesh data is touched. A root with
+    no parent is its own anchor, so it is exported around its own origin.
+    """
+    anchors: list[Object] = []
+    for root in roots:
+        anchor = top_ancestor(root)
+        if anchor not in anchors:
+            anchors.append(anchor)
+
+    old_matrices = [(anchor, anchor.matrix_world.copy()) for anchor in anchors]
+    for anchor, matrix in old_matrices:
+        moved = matrix.copy()
+        moved.translation = (0.0, 0.0, 0.0)
+        anchor.matrix_world = moved
+    bpy.context.view_layer.update()
+
+    try:
+        yield
+    finally:
+        for anchor, matrix in old_matrices:
+            anchor.matrix_world = matrix
+        bpy.context.view_layer.update()
+
+
+@contextmanager
+def selection_at_world_origin(roots: list[Object]) -> Iterator[None]:
+    """Sit one or more groups on the world origin for the block, then put them back.
+
+    A single group is handled by :func:`centered_at_world_origin`, so it matches Batch Export
+    exactly. Several groups are moved together: the bottom center of their combined bounding box
+    goes to (0, 0, 0) and they keep their layout relative to each other.
+    """
+    if len(roots) == 1:
+        with centered_at_world_origin(roots[0]):
+            yield
+        return
+
+    old_matrices = [(root, root.matrix_world.copy()) for root in roots]
+    offset = combined_bottom_center(roots)
+    for root, matrix in old_matrices:
+        moved = matrix.copy()
+        moved.translation -= offset
+        root.matrix_world = moved
+    bpy.context.view_layer.update()
+
+    try:
+        yield
+    finally:
+        for root, matrix in old_matrices:
+            root.matrix_world = matrix
         bpy.context.view_layer.update()

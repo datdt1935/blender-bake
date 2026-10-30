@@ -67,6 +67,77 @@ def check_batch_export(obj: bpy.types.Object) -> None:
     assert_true(after_slots == before_slots, f"Material slots not restored: {after_slots} != {before_slots}")
 
 
+def _glb_nodes(path: Path) -> dict[str, dict]:
+    """Read the node list out of a GLB file's JSON chunk."""
+    import json
+    import struct
+
+    data = path.read_bytes()
+    length = struct.unpack("<I", data[12:16])[0]
+    return {node["name"]: node for node in json.loads(data[20 : 20 + length])["nodes"]}
+
+
+def _export_selection(objects: list[bpy.types.Object]) -> Path:
+    bpy.ops.object.select_all(action="DESELECT")
+    for obj in objects:
+        obj.select_set(True)
+    bpy.context.view_layer.objects.active = objects[0]
+    export_dir = Path(tempfile.mkdtemp(prefix="alb_smoke_split_"))
+    result = bpy.ops.object.alb_batch_export_glb(directory=str(export_dir))
+    assert_true(result == {"FINISHED"}, f"Split export returned {result}")
+    return export_dir
+
+
+def check_split_selected_export() -> None:
+    """Only the selected meshes are split out, each at the origin and still aligned."""
+    settings = bpy.context.scene.alb_settings
+    settings.export_keep_original_pivot = True
+    settings.export_split_selected_meshes = True
+
+    pivot = bpy.data.objects.new("SmokeSplitPivot", None)
+    bpy.context.collection.objects.link(pivot)
+    pivot.location = (15.0, -10.0, 0.0)
+    parts = {}
+    for name, offset in (
+        ("SmokeSplitA", (0.0, 0.0, 0.0)),
+        ("SmokeSplitB", (0.5, 0.0, 0.25)),
+        ("SmokeSplitC", (-0.4, 0.3, 0.1)),
+    ):
+        bpy.ops.mesh.primitive_cube_add(size=0.2)
+        part = bpy.context.object
+        part.name = name
+        part.parent = pivot
+        part.location = offset
+        parts[name] = part
+    bpy.context.view_layer.update()
+    before = pivot.matrix_world.copy()
+
+    # Pivot + A + C selected: the pivot is skipped, B is left out, A and C get a file each.
+    export_dir = _export_selection([pivot, parts["SmokeSplitA"], parts["SmokeSplitC"]])
+    files = sorted(p.name for p in export_dir.glob("*.glb"))
+    assert_true(files == ["SmokeSplitA.glb", "SmokeSplitC.glb"], f"Expected only the selected meshes, got {files}")
+    for name in ("SmokeSplitA", "SmokeSplitC"):
+        nodes = _glb_nodes(export_dir / f"{name}.glb")
+        assert_true(list(nodes) == [name], f"{name}.glb should hold only that mesh: {list(nodes)}")
+        # glTF is +Y up: Blender (x, y, z) is written as (x, z, -y).
+        x, y, z = parts[name].location
+        expected = [x, z, -y]
+        written = nodes[name].get("translation", [0.0, 0.0, 0.0])
+        drift = max(abs(a - b) for a, b in zip(written, expected))
+        assert_true(drift < 1e-5, f"{name} should sit at {expected} relative to the pivot, got {written}")
+
+    # The pivot alone is still one file with every part under it.
+    export_dir = _export_selection([pivot])
+    files = sorted(p.name for p in export_dir.glob("*.glb"))
+    assert_true(files == ["SmokeSplitPivot.glb"], f"Expected one file for a lone pivot, got {files}")
+    nodes = _glb_nodes(export_dir / "SmokeSplitPivot.glb")
+    assert_true(set(parts) <= set(nodes), f"Lone pivot file should hold every part: {list(nodes)}")
+
+    bpy.context.view_layer.update()
+    drift = max(abs(pivot.matrix_world[r][c] - before[r][c]) for r in range(4) for c in range(4))
+    assert_true(drift < 1e-5, f"Split export moved the pivot permanently (drift {drift})")
+
+
 def main() -> None:
     repo_root = Path(__file__).resolve().parents[1]
     sys.path.insert(0, str(repo_root))
@@ -115,6 +186,7 @@ def main() -> None:
         assert_true(output.exists(), f"Expected baked PNG at {output}")
 
         check_batch_export(obj)
+        check_split_selected_export()
 
     finally:
         addon.unregister()

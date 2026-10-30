@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.19.0
+
+- Added a **Split Selected Meshes** checkbox to the Export box, on by default and active while **Keep Original Pivot** is on. **Batch Export GLB** then writes every selected mesh to its own `<mesh name>.glb` holding only that mesh, with its top-most parent (for example an Empty) moved to the world origin. Unselected parts are left out. Each file loads at 0, 0, 0 and the parts line up with each other exactly as in Blender.
+- A selected Empty is skipped when something under it is selected too; selected on its own it is still exported as one file with everything under it.
+
+## 1.18.0
+
+- Added a **Keep Original Pivot** checkbox to the Export box, on by default. **Export GLB** and **Batch Export GLB** then export in parent (local) space with a shared pivot: the top-most parent of each selected object (for example an Empty) is moved to the world origin for the export and put back afterwards, instead of re-centering each object on its bounding-box bottom center. Parts exported from the same parent share its pivot, so placing them at one transform in the engine rebuilds them exactly as in Blender.
+- Only the parent's location is zeroed; rotation, scale, object origins and mesh data are left untouched. A top-level object with no parent is exported around its own origin. Turn the option off to get the previous bottom-center behavior.
+
+## 1.17.0
+
+- **Export GLB** now places the selection on the world origin before it writes the file, the same way **Batch Export GLB** does (origin bottom center + center), and puts the objects back where they were afterwards. Several separate objects are moved together, so they keep their layout relative to each other.
+- **Export GLB** now asks for the `.glb` file directly and exports with the shared preset, instead of opening Blender's native glTF export window. Children of a selected parent are exported with it.
+
 ## 1.16.0
 
 - Added an **Ignore Material** field to the Export box, defaulting to `Assets_Palette`. **Batch Export GLB** empties every material slot holding that material before it writes a file, so the palette material never ends up in the exported GLB, and fills the slots back in afterwards - the object is left exactly as it was.

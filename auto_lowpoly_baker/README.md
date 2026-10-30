@@ -64,7 +64,9 @@ In the **Rig** section, select an object and click **Reset Pose** to reset its r
 
 Enable **Uncheck Active Animations** (on by default) so Reset Pose first mutes the rig's active NLA animation tracks and clears its active action. Without this, an active animation drives the pose back to the animated frame instead of the rest pose.
 
-In the **Export** section, select the objects to export and click **Export GLB**. Blender's native glTF export window opens with a fixed preset already applied — GLB binary, selected objects only, +Y up, UVs and Normals, materials as WebP (quality 30), shape keys and skinning, and Draco mesh compression (level 6; quantization position 14, normal 10, texcoord 12, color 10, generic 12) — so you can review or adjust any setting and pick the destination before exporting.
+In the **Export** section, select the objects to export and click **Export GLB**, then pick the destination `.glb` file. The selection is placed on the world origin first (origin bottom center + center, the same as **Batch Export GLB**), exported with a fixed preset — GLB binary, selected objects only, +Y up, UVs and Normals, materials as WebP (quality 30), shape keys and skinning, and Draco mesh compression (level 6; quantization position 14, normal 10, texcoord 12, color 10, generic 12) — and then put back where it was. Several separate objects are moved together, so they keep their layout relative to each other.
+
+To split parts out of a model built as an Empty with several child meshes, turn on **Keep Original Pivot** and **Split Selected Meshes**, select the meshes you want and click **Batch Export GLB**. Each selected mesh is written to its own `<mesh name>.glb` (unselected parts are left out) with the Empty moved to the world origin, so every file loads at 0, 0, 0 and the parts stay aligned when loaded together.
 
 ## Troubleshooting
 

@@ -154,6 +154,30 @@ class ALB_Settings(PropertyGroup):
         ),
         default="Assets_Palette",
     )
+    export_keep_original_pivot: BoolProperty(
+        name="Keep Original Pivot",
+        description=(
+            "Export in parent (local) space with a shared pivot. The top-most parent of each "
+            "selected object (for example an Empty) is moved to the world origin for the export "
+            "and put back afterwards; no object origin is changed. Parts exported from the same "
+            "parent all share that parent's pivot, so placing them at one transform in the engine "
+            "rebuilds them exactly as in Blender. A top-level object is exported around its own "
+            "origin. When off, every group is re-centered on its bounding-box bottom center"
+        ),
+        default=True,
+    )
+    export_split_selected_meshes: BoolProperty(
+        name="Split Selected Meshes",
+        description=(
+            "Batch Export GLB only, with Keep Original Pivot on. Every selected mesh is written "
+            "to its own <mesh name>.glb holding only that mesh, with its top-most parent (for "
+            "example an Empty) moved to the world origin. Unselected parts are left out. Each "
+            "file loads at 0, 0, 0 and the parts still line up with each other as in Blender. "
+            "A selected Empty is skipped when something under it is selected too; selected on "
+            "its own it is still exported as one file with everything under it"
+        ),
+        default=True,
+    )
     layout_spacing: FloatProperty(
         name="Compact Spacing",
         description="Exact edge-to-edge gap between neighboring object bounding boxes used by Compact Grid",

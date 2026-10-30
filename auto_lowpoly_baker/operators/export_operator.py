@@ -14,12 +14,93 @@ from ..services.export_service import (
     centered_at_world_origin,
     export_glb,
     materials_stripped,
+    parents_at_world_origin,
     safe_filename,
+    selection_at_world_origin,
+    split_selected_meshes,
 )
 from ..services.layout_service import group_members, group_roots
 from ..utils.logging import get_logger
 
 LOGGER = get_logger()
+
+
+class OBJECT_OT_alb_export_glb(Operator):
+    """Export the selected objects to one GLB file, placed on the world origin."""
+
+    bl_idname = "object.alb_export_glb"
+    bl_label = "Export GLB"
+    bl_description = (
+        "Ask for a file, then export the selected objects to one GLB with the shared preset. The "
+        "selection is placed on the world origin first (origin bottom center + center, the same as "
+        "Batch Export GLB) and put back where it was afterwards. Several separate objects move "
+        "together, so they keep their layout relative to each other. With Keep Original Pivot on, "
+        "the top-most parent is moved to the world origin instead, so the file keeps that parent's pivot"
+    )
+    bl_options = {"REGISTER", "UNDO"}
+
+    filepath: StringProperty(name="File Path", subtype="FILE_PATH")
+    filter_glob: StringProperty(default="*.glb", options={"HIDDEN"})
+    check_existing: BoolProperty(default=True, options={"HIDDEN"})
+
+    @classmethod
+    def poll(cls, context: Context) -> bool:
+        return len(context.selected_objects) > 0
+
+    def invoke(self, context: Context, event):
+        """Suggest <active object name>.glb next to the .blend file, then ask for the file."""
+        if not self.filepath:
+            active = context.active_object or context.selected_objects[0]
+            folder = Path(bpy.path.abspath("//")) if bpy.data.filepath else Path.home()
+            self.filepath = str(folder / f"{safe_filename(active.name)}.glb")
+        context.window_manager.fileselect_add(self)
+        return {"RUNNING_MODAL"}
+
+    def check(self, context: Context) -> bool:
+        """Keep the .glb extension on whatever name is typed in the file browser."""
+        fixed = bpy.path.ensure_ext(self.filepath, ".glb")
+        if fixed != self.filepath:
+            self.filepath = fixed
+            return True
+        return False
+
+    def execute(self, context: Context):
+        settings = context.scene.alb_settings
+
+        if not self.filepath:
+            self.report({"ERROR"}, "Choose a file to export to.")
+            return {"CANCELLED"}
+
+        roots = group_roots(context.selected_objects)
+        if not roots:
+            self.report({"ERROR"}, "Select at least one object to export.")
+            return {"CANCELLED"}
+
+        filepath = Path(bpy.path.abspath(bpy.path.ensure_ext(self.filepath, ".glb")))
+        keep_pivot = settings.export_keep_original_pivot
+        try:
+            filepath.parent.mkdir(parents=True, exist_ok=True)
+            with preserved_blender_context(context):
+                members = [member for root in roots for member in group_members(root)]
+                select_only(context, members, active=roots[0])
+                placement = (
+                    parents_at_world_origin(roots)
+                    if keep_pivot
+                    else selection_at_world_origin(roots)
+                )
+                with placement:
+                    export_glb(str(filepath))
+        except Exception as exc:
+            LOGGER.error("Export GLB failed: %s\n%s", exc, traceback.format_exc())
+            settings.last_status = f"Export failed: {exc}"
+            self.report({"ERROR"}, f"Export GLB failed: {exc}")
+            return {"CANCELLED"}
+
+        mode = "with original pivot" if keep_pivot else "at world origin"
+        status = f"Exported {filepath.name} {mode}"
+        settings.last_status = status
+        self.report({"INFO"}, status)
+        return {"FINISHED"}
 
 
 class OBJECT_OT_alb_batch_export_glb(Operator):
@@ -33,7 +114,9 @@ class OBJECT_OT_alb_batch_export_glb(Operator):
         "center + center) and put back where it was afterwards, so each file holds the object at "
         "0, 0, 0 instead of its position in the scene. Material slots holding the Ignore Material "
         "are emptied for the export and filled back in afterwards. A parented hierarchy is exported "
-        "as one file named after its top-most object"
+        "as one file named after its top-most object. With Keep Original Pivot on, the top-most "
+        "parent is moved to the world origin instead, so parts of one parent share its pivot. "
+        "With Split Selected Meshes also on, every selected mesh is written to its own file"
     )
     bl_options = {"REGISTER", "UNDO"}
 
@@ -75,6 +158,12 @@ class OBJECT_OT_alb_batch_export_glb(Operator):
             return {"CANCELLED"}
 
         ignore_material = settings.export_ignore_material
+        keep_pivot = settings.export_keep_original_pivot
+        if keep_pivot and settings.export_split_selected_meshes:
+            # Each selected mesh is its own file; zeroing its parent keeps the files aligned.
+            units = split_selected_meshes(context.selected_objects)
+        else:
+            units = [(root, group_members(root)) for root in roots]
         exported: list[str] = []
         replaced = 0
         stripped = 0
@@ -82,14 +171,18 @@ class OBJECT_OT_alb_batch_export_glb(Operator):
 
         try:
             with preserved_blender_context(context):
-                for root in roots:
+                for root, members in units:
                     filepath = directory / f"{_unique_name(safe_filename(root.name), used_names)}.glb"
                     if filepath.exists():
                         replaced += 1
-                    members = group_members(root)
                     select_only(context, members, active=root)
+                    placement = (
+                        parents_at_world_origin([root])
+                        if keep_pivot
+                        else centered_at_world_origin(root)
+                    )
                     with (
-                        centered_at_world_origin(root),
+                        placement,
                         materials_stripped(members, ignore_material) as slots_cleared,
                     ):
                         export_glb(str(filepath))

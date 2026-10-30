@@ -14,7 +14,7 @@ from .operators.bake_operator import (
     OBJECT_OT_alb_reset_config,
     OBJECT_OT_alb_reset_pose,
 )
-from .operators.export_operator import OBJECT_OT_alb_batch_export_glb
+from .operators.export_operator import OBJECT_OT_alb_batch_export_glb, OBJECT_OT_alb_export_glb
 from .operators.layout_operator import (
     OBJECT_OT_alb_center_world,
     OBJECT_OT_alb_position_grid,
@@ -27,7 +27,7 @@ from .properties.settings import ALB_Settings
 bl_info = {
     "name": "Auto Lowpoly Baker",
     "author": "OpenAI",
-    "version": (1, 16, 0),
+    "version": (1, 19, 0),
     "blender": (4, 2, 0),
     "location": "View3D > Sidebar > Auto Baker / Assets",
     "description": "Create a decimated low-poly copy and bake material color to a PNG texture",
@@ -49,6 +49,7 @@ CLASSES = (
     OBJECT_OT_alb_position_grid,
     OBJECT_OT_alb_position_grid_compact,
     OBJECT_OT_alb_center_world,
+    OBJECT_OT_alb_export_glb,
     OBJECT_OT_alb_batch_export_glb,
     VIEW3D_PT_alb_assets,
 )
